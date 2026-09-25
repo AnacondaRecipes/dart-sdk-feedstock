@@ -24,16 +24,18 @@ build:
   skip: true  # [ppc64le]
   # The binaries are self-contained and do not react well to prefix replacement.
   binary_relocation: false
-{% if linux %}
-  # System libraries the prebuilt binaries link against.
+  # System libraries the prebuilt binaries link against. The selector goes on
+  # each list item instead of the mapping key: a selected-out key would orphan
+  # its items, and the empty key left behind on non-Linux platforms is harmless.
   missing_dso_whitelist:
-    - "*/ld-linux.so.2"
-    - "*/lib64/ld-linux-x86-64.so.2"
-    - "*/libpthread.so.0"
-    - "*/libdl.so.2"
-    - "*/libm.so.6"
-    - "*/libc.so.6"
-{% endif %}
+    - "*/ld-linux.so.2"  # [linux]
+    - "*/lib64/ld-linux-x86-64.so.2"  # [linux]
+    - "*/libpthread.so.0"  # [linux]
+    - "*/libdl.so.2"  # [linux]
+    - "*/libm.so.6"  # [linux]
+    - "*/librt.so.1"  # [linux]
+    - "*/libresolv.so.2"  # [linux]
+    - "*/libc.so.6"  # [linux]
 
 requirements:
   build: []
