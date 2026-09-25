@@ -1,0 +1,64 @@
+{% set version = "3.13.4" %}
+
+package:
+  name: dart-sdk
+  version: {{ version }}
+
+source:
+  # Official prebuilt SDK binaries from Google's dart-archive. The Dart SDK
+  # cannot be built from source in conda (requires depot_tools/gclient), so
+  # this package repacks the official release zips.
+  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-linux-x64-release.zip  # [linux and x86_64]
+  sha256: 6487a10df5eab890d746d14a55f4c70bec3c1c0633f51804eb504cbc0fc395bb  # [linux and x86_64]
+  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-linux-arm64-release.zip  # [linux and aarch64]
+  sha256: 1d545609bdf9da6fb5e68fbd96a599e2836e44ee64379991bd4493ee764d2fdb  # [linux and aarch64]
+  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-windows-x64-release.zip  # [win and x86_64]
+  sha256: c38bcecee16b348694d4acc72b3781e5fa0e8766a4d0d1576182c7204ab3d763  # [win and x86_64]
+  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-macos-x64-release.zip  # [osx and x86_64]
+  sha256: a8a75eb653a658d0e8238ec4a5b00a4a0023411d5d6ecc5f57e7cc19f7ae71e7  # [osx and x86_64]
+  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-macos-arm64-release.zip  # [osx and arm64]
+  sha256: b36bdca9cd4bf987e1453e1e3ec45fb2c2a8c4df3246b510b66d3922bab04463  # [osx and arm64]
+
+build:
+  number: 0
+  skip: true  # [ppc64le]
+  # The binaries are self-contained and do not react well to prefix replacement.
+  binary_relocation: false
+{% if linux %}
+  # System libraries the prebuilt binaries link against.
+  missing_dso_whitelist:
+    - "*/ld-linux.so.2"
+    - "*/lib64/ld-linux-x86-64.so.2"
+    - "*/libpthread.so.0"
+    - "*/libdl.so.2"
+    - "*/libm.so.6"
+    - "*/libc.so.6"
+{% endif %}
+
+requirements:
+  build: []
+  run: []
+
+test:
+  files:
+    - bin/dart  # [unix]
+    - bin/dart.exe  # [win]
+  commands:
+    - dart --help
+
+about:
+  home: https://dart.dev/
+  doc_url: https://dart.dev/
+  dev_url: https://github.com/dart-lang/sdk
+  license: BSD-3-Clause
+  license_family: BSD
+  license_file: LICENSE
+  summary: a client-optimized language for developing fast apps on any platform
+  description: |
+    Dart is a client-optimized language for developing fast apps on any platform.
+    This package repacks Google's official prebuilt SDK binaries.
+
+extra:
+  recipe-maintainers:
+    - msarahan
+    - munechika-koyo
