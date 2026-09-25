@@ -43,12 +43,14 @@ requirements:
   build: []
   run: []
 
+# The Dart VM in 3.13.4 requires macOS 14; PBP osx test workers run macOS 13 (PKG-18408).
 test:
   files:
     - bin/dart  # [unix]
     - bin/dart.exe  # [win]
   commands:
-    - dart --help
+    - dart --help  # [not osx]
+    - test -x "${PREFIX}/bin/dart"  # [unix]
 
 about:
   home: https://dart.dev/
