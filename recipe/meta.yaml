@@ -36,6 +36,8 @@ build:
     - "*/librt.so.1"  # [linux]
     - "*/libresolv.so.2"  # [linux]
     - "*/libc.so.6"  # [linux]
+    # API-set contract DLL resolved by the OS, not present in C:\Windows\System32.
+    - "*/api-ms-win-core-path-l1-1-0.dll"  # [win]
 
 requirements:
   build: []
