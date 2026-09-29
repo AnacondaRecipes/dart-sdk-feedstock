@@ -1,29 +1,39 @@
-From aae3523e5854d53279283744d96666b2f5bb967d Mon Sep 17 00:00:00 2001
+From 58fb7fee94378869fccf65a82ae7d6a2962c0377 Mon Sep 17 00:00:00 2001
 From: Steven <scrass@anaconda.com>
-Date: Tue, 29 Sep 2026 14:14:55 -0600
-Subject: [PATCH] Link libstdc++ statically on linux
+Date: Tue, 29 Sep 2026 17:38:36 -0600
+Subject: [PATCH] Link conda runtime libs into the GN build on linux
 
-Conda builds the SDK with the conda gcc toolchain; without this the dart
-binaries would dynamically link libstdc++ from the runtime environment
-with no rpath (GN does not use conda's LDFLAGS), breaking on systems
-whose system libstdc++ is older than the build toolchain's. Static
-linking matches Google's official SDK binaries, which ship without a
-libstdc++ runtime dependency.
+Conda builds the SDK with the conda gcc toolchain; GN does not use
+conda's LDFLAGS, so the binaries would dynamically link libstdc++ from
+the runtime environment with no rpath, and the sanitizer variant
+runtimes (dartaotruntime_asan/_tsan, built unconditionally on linux)
+cannot resolve libgcc_s.so.1 at link time. Link libstdc++ statically,
+matching Google's official SDK binaries, and add the conda build
+prefix's lib directory to the link search and rpath-link paths.
 ---
- build/config/compiler/BUILD.gn | 3 +++
- 1 file changed, 3 insertions(+)
+ build/config/compiler/BUILD.gn | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
 diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
-index 2932b853..7d081610 100644
+index 2932b85..0f1f6cb 100644
 --- a/build/config/compiler/BUILD.gn
 +++ b/build/config/compiler/BUILD.gn
-@@ -595,6 +595,9 @@ config("runtime_library") {
+@@ -595,6 +595,18 @@ config("runtime_library") {
    }
  
    if (is_linux) {
 +    # Conda: link libstdc++ statically so the binaries are self-contained and
-+    # do not depend on the system libstdc++ version at runtime.
++    # do not depend on the system libstdc++ version at runtime, and make the
++    # conda build prefix's runtime libraries discoverable (the sanitizer
++    # runtimes need libgcc_s.so.1, which GN does not add to the link path).
 +    ldflags += [ "-static-libstdc++" ]
++    _conda_build_prefix = getenv("BUILD_PREFIX")
++    if (_conda_build_prefix != "") {
++      ldflags += [
++        "-L$_conda_build_prefix/lib",
++        "-Wl,-rpath-link,$_conda_build_prefix/lib",
++      ]
++    }
      libs += [
        "dl",
        "pthread",

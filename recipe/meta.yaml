@@ -22,8 +22,8 @@ source:
     #       from Arch's dart package.
     # 0002: keep the linux binaries self-contained (no dynamic libstdc++).
     patches:
-      - patches/0001-ignore-warnings-in-binaryen.patch
-      - patches/0002-link-libstdc-static-on-linux.patch
+      - patches/0001-ignore-warnings-in-binaryen.patch  # [not win]
+      - patches/0002-link-libstdc-static-on-linux.patch  # [linux]
   # Prebuilt DevTools app shipped at bin/resources/devtools. Upstream fetches
   # it as a CIPD package (build_devtools_from_sources is false upstream);
   # building it from source would need the Flutter toolchain. The explicit fn
@@ -148,6 +148,10 @@ build:
     - "*/librt.so.1"  # [linux]
     - "*/libresolv.so.2"  # [linux]
     - "*/libc.so.6"  # [linux]
+    # Sanitizer runtimes for the (test-only, linux-only) dartaotruntime_asan
+    # and dartaotruntime_tsan binaries; the SDK also ships these.
+    - "*/libasan.so.*"  # [linux]
+    - "*/libtsan.so.*"  # [linux]
     # API-set contract DLL resolved by the OS, not present in C:\Windows\System32.
     - "*/api-ms-win-core-path-l1-1-0.dll"  # [win]
 
@@ -159,8 +163,8 @@ requirements:
     # (and anaconda-linter 0.1.1 cannot render that jinja).
     - gn
     - ninja
-    - patch  # [unix]
-    - git  # [not win]
+    - patch  # [not win]
+    - git  # analint: no_git_on_windows  # conda-build needs git to fetch the git_url sources (mini_chromium has no tarball mirror)
     - python
     # llvm-ar/llvm-nm/llvm-strip/dsymutil for the GN mac toolchain.
     - llvm-tools  # [osx]
