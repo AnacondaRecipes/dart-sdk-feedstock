@@ -28,6 +28,28 @@ if [[ "$(uname)" == "Darwin" ]]; then
     SED_EXPR='s|rebase_path("//buildtools/mac-x64/clang/bin", root_build_dir)|rebase_path("'"$BUILD_PREFIX"'/bin", root_build_dir)|'
   fi
   sed -i.bak "$SED_EXPR" "$TC_FILE" && rm -f "$TC_FILE.bak"
+  # mac_sdk.gni runs find_sdk.py unconditionally (rejects conda workers with
+  # no Xcode); guard it so an explicit mac_sdk_path short-circuits discovery.
+  python3 - <<'PY'
+p = 'build/config/mac/mac_sdk.gni'
+s = open(p).read()
+old = '''find_sdk_lines =
+    exec_script("//build/mac/find_sdk.py", find_sdk_args, "list lines")
+mac_sdk_version = find_sdk_lines[1]
+if (mac_sdk_path == "") {
+  mac_sdk_path = find_sdk_lines[0]
+}'''
+new = '''if (mac_sdk_path == "") {
+  find_sdk_lines =
+      exec_script("//build/mac/find_sdk.py", find_sdk_args, "list lines")
+  mac_sdk_version = find_sdk_lines[1]
+  mac_sdk_path = find_sdk_lines[0]
+} else {
+  mac_sdk_version = mac_sdk_min
+}'''
+assert s.count(old) == 1
+open(p, 'w').write(s.replace(old, new))
+PY
   GN_ARGS="$GN_ARGS mac_sdk_path = \"${CONDA_BUILD_SYSROOT}\""
   GN_ARGS="$GN_ARGS mac_sdk_min = \"${MACOSX_DEPLOYMENT_TARGET:-10.13}\""
   if [[ "$(uname -m)" == "arm64" ]]; then
@@ -55,11 +77,13 @@ fi
 
 gn gen out --args="$GN_ARGS"
 
-# Build the VM first, then use it to generate the package config that the
-# snapshot-compiling create_sdk actions consume (upstream uses a checked-in
-# prebuilt dart-sdk for this; we self-bootstrap instead).
-ninja -C out dart -j "${CPU_COUNT}"
-out/dart --packages=tools/empty_package_config.json tools/generate_package_config.dart
+# Build the VM first (the dartdev-enabled `dart` binary dispatches to a
+# `dartvm` executable next to it, which create_sdk also ships as bin/dartvm),
+# then use it to generate the package config the snapshot-compiling create_sdk
+# actions consume (upstream uses a checked-in prebuilt dart-sdk for this; we
+# self-bootstrap instead).
+ninja -C out dartvm dart -j "${CPU_COUNT}"
+out/dartvm --packages=tools/empty_package_config.json tools/generate_package_config.dart
 
 ninja -C out create_sdk -j "${CPU_COUNT}"
 

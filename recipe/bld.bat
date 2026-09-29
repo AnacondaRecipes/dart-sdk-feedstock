@@ -18,11 +18,13 @@ set "WINDOWSSDKDIR=%VSINSTALLDIR%Windows Kits\10\"
 
 gn gen out --args="target_cpu = \"x64\" is_debug = false is_release = true verify_sdk_hash = false"
 
-:: Build the VM first, then use it to generate the package config that the
-:: snapshot-compiling create_sdk actions consume (upstream uses a checked-in
-:: prebuilt dart-sdk for this; we self-bootstrap instead).
-ninja -C out dart -j %CPU_COUNT%
-out\dart.exe --packages=tools\empty_package_config.json tools\generate_package_config.dart
+:: Build the VM first (the dartdev-enabled `dart` binary dispatches to a
+:: `dartvm` executable next to it, which create_sdk also ships as bin\dartvm),
+:: then use it to generate the package config the snapshot-compiling create_sdk
+:: actions consume (upstream uses a checked-in prebuilt dart-sdk for this; we
+:: self-bootstrap instead).
+ninja -C out dartvm dart -j %CPU_COUNT%
+out\dartvm.exe --packages=tools\empty_package_config.json tools\generate_package_config.dart
 
 ninja -C out create_sdk -j %CPU_COUNT%
 
