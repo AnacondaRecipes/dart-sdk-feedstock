@@ -1,0 +1,57 @@
+From 963b46dfebad01cab9e063fc8b508df227154a31 Mon Sep 17 00:00:00 2001
+From: Ryan Macnak <rmacnak@google.com>
+Date: Mon, 27 Jul 2026 09:57:27 -0700
+Subject: [PATCH] [build] Ignore warnings in binaryen.
+
+Bug: https://github.com/dart-lang/sdk/issues/63406
+Change-Id: I9aef9e8892fd0bf75c54036649c7622c9f9e3db2
+Reviewed-on: https://dart-review.googlesource.com/c/sdk/+/525980
+Reviewed-by: Martin Kustermann <kustermann@google.com>
+Commit-Queue: Ryan Macnak <rmacnak@google.com>
+---
+ third_party/binaryen/BUILD.gn | 32 +-------------------------------
+ 1 file changed, 1 insertion(+), 31 deletions(-)
+
+diff --git a/third_party/binaryen/BUILD.gn b/third_party/binaryen/BUILD.gn
+index 40d3c15a573c..ad33d4cc9c52 100644
+--- a/third_party/binaryen/BUILD.gn
++++ b/third_party/binaryen/BUILD.gn
+@@ -8,37 +8,7 @@ config("binaryen_flags") {
+   cflags = []
+   if (is_clang || !is_win) {
+     # Clang or GCC
+-    cflags += [
+-      "-Wno-deprecated-declarations",
+-      "-Wno-pessimizing-move",
+-      "-Wno-range-loop-construct",
+-      "-Wno-sign-compare",
+-      "-Wno-unused-function",
+-    ]
+-
+-    if (is_clang) {
+-      # Clang
+-      cflags += [
+-        "-Wno-deprecated-this-capture",
+-        "-Wno-header-hygiene",
+-        "-Wno-inconsistent-missing-override",
+-        "-Wno-unknown-warning-option",
+-        "-Wno-unused-private-field",
+-      ]
+-    } else {
+-      # GCC
+-      cflags += [
+-        "-Wno-array-bounds",
+-        "-Wno-dangling-pointer",
+-        "-Wno-deprecated",
+-        "-Wno-init-list-lifetime",
+-
+-        # Bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86465#c16 triggered by
+-        # https://github.com/WebAssembly/binaryen/blob/cdb7aeab40b4c522de20b242019f7e88641445d5/src/wasm/wasm-type.cpp#L530.
+-        "-Wno-maybe-uninitialized",
+-        "-Wno-redundant-move",
+-      ]
+-    }
++    cflags += [ "-w" ]
+   }
+ 
+   if (is_clang && is_win) {

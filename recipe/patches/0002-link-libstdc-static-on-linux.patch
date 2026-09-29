@@ -1,0 +1,32 @@
+From aae3523e5854d53279283744d96666b2f5bb967d Mon Sep 17 00:00:00 2001
+From: Steven <scrass@anaconda.com>
+Date: Tue, 29 Sep 2026 14:14:55 -0600
+Subject: [PATCH] Link libstdc++ statically on linux
+
+Conda builds the SDK with the conda gcc toolchain; without this the dart
+binaries would dynamically link libstdc++ from the runtime environment
+with no rpath (GN does not use conda's LDFLAGS), breaking on systems
+whose system libstdc++ is older than the build toolchain's. Static
+linking matches Google's official SDK binaries, which ship without a
+libstdc++ runtime dependency.
+---
+ build/config/compiler/BUILD.gn | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index 2932b853..7d081610 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -595,6 +595,9 @@ config("runtime_library") {
+   }
+ 
+   if (is_linux) {
++    # Conda: link libstdc++ statically so the binaries are self-contained and
++    # do not depend on the system libstdc++ version at runtime.
++    ldflags += [ "-static-libstdc++" ]
+     libs += [
+       "dl",
+       "pthread",
+-- 
+2.50.1 (Apple Git-155)
+

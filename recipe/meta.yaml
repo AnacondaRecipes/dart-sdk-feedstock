@@ -1,32 +1,104 @@
 {% set version = "3.13.4" %}
 
+# The Dart SDK is built from source, mirroring Arch Linux's dart package
+# (https://gitlab.archlinux.org/archlinux/packaging/packages/dart): the sdk
+# tree plus the git dependencies pinned in dart-lang/sdk's DEPS file at tag
+# {{ version }}, compiled with gn + ninja.
+#
+# dart.googlesource.com mirrors these GitHub repos at identical SHAs (per the
+# DEPS header comment), so GitHub tarball URLs pin the same content. The
+# test/benchmark-only deps (d8, browsers, flutter, devtools sources, webdriver,
+# benchmarks-internal, emsdk, ...) are not needed by `ninja create_sdk`.
+# Format: (path under sdk/, URL, sha256).
+{% set gh_deps = [
+  ("third_party/pkg/core", "https://github.com/dart-lang/core/archive/be0b1531c445a185d3e93887b8d0355fc766c314.tar.gz", "5c82852382b1b6a16794cb2a4181981c561862ab95541e6e0eefaae4d1a1084d"),
+  ("third_party/pkg/dart_style", "https://github.com/dart-lang/dart_style/archive/39edc2d946a5d7bd1caf6f1695f366b00f7b873c.tar.gz", "6e3097cf8fb1ddb62c9edd496ecd2e55a27c16c5672b3ba65b900c56eef46b57"),
+  ("third_party/pkg/dartdoc", "https://github.com/dart-lang/dartdoc/archive/1d56f263955f329b6701d8f84f069eb0aef353a4.tar.gz", "67f5f080ce57aee90b1e7dc6ffcea935bb4ce0c612e1d3ecc1566a1db19c3109"),
+  ("third_party/pkg/ecosystem", "https://github.com/dart-lang/ecosystem/archive/848b3bf3b757d2e9ae4d60030eeed5756c87783f.tar.gz", "ad068b5167e9b8e51c6ff2c06bfc9aa82f36a56412e4d3856857fe5f48dc0098"),
+  ("third_party/pkg/http", "https://github.com/dart-lang/http/archive/5d94ef52582867e077bf41c3fa20fb8b1d1d834e.tar.gz", "0c9c1275b6bf34dac23e6700794b0a52db48434a4c50942f2dc311c8fe74ba1e"),
+  ("third_party/pkg/i18n", "https://github.com/dart-lang/i18n/archive/d0683bdea253d19a4350f5bc2be9017aba61837f.tar.gz", "2c59a7d665a41f692781a3949b335dc335c1217d7b5834c669022ce5d00ab33e"),
+  ("third_party/pkg/leak_tracker", "https://github.com/dart-lang/leak_tracker/archive/f5620600a5ce1c44f65ddaa02001e200b096e14c.tar.gz", "1326e2f3c2e60980353d5118346fb6bf811b9328865785d218b85977bc2b6a79"),
+  ("third_party/pkg/native", "https://github.com/dart-lang/native/archive/d51c53334486af69435b0b45c4bdfe303a830170.tar.gz", "c43e7a9da07617ca83b9a372f1fbbb1215496c25f5fdd87fa21d2c13330926f7"),
+  ("third_party/pkg/protobuf", "https://github.com/dart-lang/protobuf/archive/84079e8b8531309e06ba7276b1c28bdca9210ad6.tar.gz", "54497d8ff1bdd90bf35d842ffadd3c396536ec929896ccabe925b468a6643933"),
+  ("third_party/pkg/pub", "https://github.com/dart-lang/pub/archive/ec276d10a7fa0f6c6ec005340fb9ad29f3b012d0.tar.gz", "d1e3717e42b34ddb1cdff3caea05a89d1a395cf2eef3c8dd0a9681bf88bfa8b9"),
+  ("third_party/pkg/shelf", "https://github.com/dart-lang/shelf/archive/71248e727317930f244c4b4535e9733bcfc66677.tar.gz", "b705d4154be7d04cb64c21efa24276c731a0033a0f8c79a98a2b9f553462258d"),
+  ("third_party/pkg/sync_http", "https://github.com/dart-lang/sync_http/archive/6666fff944221891182e1f80bf56569338164d72.tar.gz", "93cd64aed9b2fba27904b32655dfddde03f52b2ce18924f89e927e9a9e7c026f"),
+  ("third_party/pkg/tar", "https://github.com/simolus3/tar/archive/13479f7c2a18f499e840ad470cfcca8c579f6909.tar.gz", "34e1dd472242f559078d2524d599a2ac99748ecacc5a07764e729fcc16ce06d1"),
+  ("third_party/pkg/test", "https://github.com/dart-lang/test/archive/bd92e633e7f05edc3301865bdc00d1ae181cb1f1.tar.gz", "36ae11ee40f83313459baa0bceb9dbe08f92e392ce48770cbb9e860f4a6eee34"),
+  ("third_party/pkg/tools", "https://github.com/dart-lang/tools/archive/7fec8be9af0cd0367d03dbec29b66b3f46565720.tar.gz", "1dfe5d32e5112452ff512e3ab89601c3080b378b84ce0f9bde38cbb39c6b4976"),
+  ("third_party/pkg/vector_math", "https://github.com/google/vector_math.dart/archive/cf3b5db7340d317dd3489e5a35434b408020a852.tar.gz", "76f14e5ea41c22440fa8c980dfe63ce87683473f79448f51e30ef23df2d013d1"),
+  ("third_party/pkg/webdriver", "https://github.com/google/webdriver.dart/archive/3a711ebb36871eac997c5d5d2429f7414873dc63.tar.gz", "116c6ea6d1116137ca3ab13bca3dbe11df34ed60246fc53810e36b6b2e96168e"),
+  ("third_party/pkg/webkit_inspection_protocol", "https://github.com/google/webkit_inspection_protocol.dart/archive/762115a971d1968bc940454ad1e88d506d8c5640.tar.gz", "b44e2d1a0971103aecf6441e7dfd047826bf9f5d8a96ecbd4e4f03d62e6067ac"),
+  ("third_party/pkg/web", "https://github.com/dart-lang/web/archive/eb8c3fc61a1e35f48f865836c7c7342897d91bcc.tar.gz", "1ce8d673eef7c55e47bcec0c0e4da517d03dc822a59e6ec4c83d3294272c4e24"),
+  ("third_party/boringssl/src", "https://github.com/google/boringssl/archive/2e508c973d634b3aa51b71db5062bc6b096e5031.tar.gz", "b947df3df75ef5538407ef331f0c65b60ae2204a6c8fbfbde21a8d8b1d03f8fa"),
+  ("third_party/binaryen/src", "https://github.com/WebAssembly/binaryen/archive/9926156a583cec3d22d521232b31c70fa9a87dc1.tar.gz", "6f3b89393caf485b25649a4cafff750f4042e510caaa74008471d43d3ad16aa3"),
+  ("third_party/perfetto/src", "https://github.com/google/perfetto/archive/13ce0c9e13b0940d2476cd0cff2301708a9a2e2b.tar.gz", "301748842156b67d7a134cc7a7eeecd20f82e9875f5d5341355107fddab51c6e"),
+] %}
+
+# win-only git deps that have GitHub mirrors.
+{% set gh_deps_win = [
+  ("third_party/crashpad/crashpad", "https://github.com/chromium/crashpad/archive/d256de317164c0eb362bdd9cbb4d259fe6d086f3.tar.gz", "f5cbe160cdecf6d77eee55b48d30bfd54302228a416b19bcfdb13db199acb203"),
+] %}
+
+# Git-only deps without a GitHub mirror; fetched from googlesource at the
+# DEPS-pinned commit.
+{% set git_deps = [
+  ("third_party/zlib", "https://chromium.googlesource.com/chromium/src/third_party/zlib.git", "3008c4b3a06bd65392c31db8846000a21e3d03c5"),
+  ("third_party/icu", "https://chromium.googlesource.com/chromium/deps/icu.git", "a86a32e67b8d1384b33f8fa48c83a6079b86f8cd"),
+  ("third_party/libcxx", "https://llvm.googlesource.com/llvm-project/libcxx", "bd557f6f764d1e40b62528a13b124ce740624f8f"),
+  ("third_party/libcxxabi", "https://llvm.googlesource.com/llvm-project/libcxxabi", "a4dda1589d37a7e4b4f7a81ebad01b1083f2e726"),
+] %}
+{% set git_deps_win = [
+  ("third_party/mini_chromium/mini_chromium", "https://chromium.googlesource.com/chromium/mini_chromium", "203a01130fac64bfdcc8cab2e1798c7b2c0619bf"),
+] %}
+
 package:
   name: dart-sdk
   version: {{ version }}
 
 source:
-  # Official prebuilt SDK binaries from Google's dart-archive. The Dart SDK
-  # cannot be built from source in conda (requires depot_tools/gclient), so
-  # this package repacks the official release zips.
-  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-linux-x64-release.zip  # [linux and x86_64]
-  sha256: 6487a10df5eab890d746d14a55f4c70bec3c1c0633f51804eb504cbc0fc395bb  # [linux and x86_64]
-  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-linux-arm64-release.zip  # [linux and aarch64]
-  sha256: 1d545609bdf9da6fb5e68fbd96a599e2836e44ee64379991bd4493ee764d2fdb  # [linux and aarch64]
-  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-windows-x64-release.zip  # [win and x86_64]
-  sha256: c38bcecee16b348694d4acc72b3781e5fa0e8766a4d0d1576182c7204ab3d763  # [win and x86_64]
-  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-macos-x64-release.zip  # [osx and x86_64]
-  sha256: a8a75eb653a658d0e8238ec4a5b00a4a0023411d5d6ecc5f57e7cc19f7ae71e7  # [osx and x86_64]
-  url: https://storage.googleapis.com/dart-archive/channels/stable/release/{{ version }}/sdk/dartsdk-macos-arm64-release.zip  # [osx and arm64]
-  sha256: b36bdca9cd4bf987e1453e1e3ec45fb2c2a8c4df3246b510b66d3922bab04463  # [osx and arm64]
+  - url: https://github.com/dart-lang/sdk/archive/refs/tags/{{ version }}.tar.gz
+    sha256: 8a6040a7998e157e4ff6ec29141a78478aac000b372a2b065a9c53ba40cf8fa9
+    folder: sdk
+    # 0001: upstream dart-review fix (sdk#63406) needed for GCC builds; taken
+    #       from Arch's dart package.
+    # 0002: keep the linux binaries self-contained (no dynamic libstdc++).
+    patches:
+      - patches/0001-ignore-warnings-in-binaryen.patch
+      - patches/0002-link-libstdc-static-on-linux.patch
+  # Prebuilt DevTools app shipped at bin/resources/devtools. Upstream fetches
+  # it as a CIPD package (build_devtools_from_sources is false upstream);
+  # building it from source would need the Flutter toolchain.
+  - url: https://chrome-infra-packages.appspot.com/dl/dart/third_party/flutter/devtools/+/git_revision:12d595649f189f1896722623f72599077f476848  # analint: invalid_url  # CIPD endpoint answers HEAD with 405; GET works (hash verified)
+    sha256: c3d92850115fdbd1ad9e462bcb2b96a36f3f518c74fdb8086b4d0d4ead8c1caa
+    folder: sdk/third_party/devtools
+  {% for folder, url, sha in gh_deps %}
+  - url: {{ url }}
+    sha256: {{ sha }}
+    folder: sdk/{{ folder }}
+  {% endfor %}
+  {% for folder, url, sha in gh_deps_win %}
+  - url: {{ url }}  # [win]
+    sha256: {{ sha }}  # [win]
+    folder: sdk/{{ folder }}  # [win]
+  {% endfor %}
+  {% for folder, url, rev in git_deps %}
+  - git_url: {{ url }}
+    git_rev: {{ rev }}
+    folder: sdk/{{ folder }}
+  {% endfor %}
+  {% for folder, url, rev in git_deps_win %}
+  - git_url: {{ url }}  # [win]
+    git_rev: {{ rev }}  # [win]
+    folder: sdk/{{ folder }}  # [win]
+  {% endfor %}
 
 build:
   number: 0
   skip: true  # [ppc64le]
-  # The binaries are self-contained and do not react well to prefix replacement.
+  # Dart snapshots are binary blobs that must not be relocated.
   binary_relocation: false
-  # System libraries the prebuilt binaries link against. The selector goes on
-  # each list item instead of the mapping key: a selected-out key would orphan
-  # its items, and the empty key left behind on non-Linux platforms is harmless.
+  # System libraries the SDK binaries link against.
   missing_dso_whitelist:
     - "*/ld-linux.so.2"  # [linux]
     - "*/lib64/ld-linux-x86-64.so.2"  # [linux]
@@ -40,17 +112,29 @@ build:
     - "*/api-ms-win-core-path-l1-1-0.dll"  # [win]
 
 requirements:
-  build: []
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    # No {{ stdlib('c') }}: the compiler packages pull the matching sysroot
+    # (and anaconda-linter 0.1.1 cannot render that jinja).
+    - gn
+    - ninja
+    - patch
+    - git  # [not win]
+    - python
+    # llvm-ar/llvm-nm/llvm-strip/dsymutil for the GN mac toolchain.
+    - llvm-tools  # [osx]
+  host: []
+
+# No run deps: the linux build links libstdc++ statically (recipe patch) and
+# otherwise the SDK only needs the platform libc, like Google's official binaries.
   run: []
 
-# The Dart VM in 3.13.4 requires macOS 14; PBP osx test workers run macOS 13 (PKG-18408).
 test:
-  files:
-    - bin/dart  # [unix]
-    - bin/dart.exe  # [win]
   commands:
     - dart --help  # [not osx]
     - test -x "${PREFIX}/bin/dart"  # [unix]
+    - if not exist "%LIBRARY_BIN%\dart.exe" exit 1  # [win]
 
 about:
   home: https://dart.dev/
@@ -62,7 +146,8 @@ about:
   summary: a client-optimized language for developing fast apps on any platform
   description: |
     Dart is a client-optimized language for developing fast apps on any platform.
-    This package repacks Google's official prebuilt SDK binaries.
+    This package builds the Dart SDK from source with gn and ninja, mirroring
+    Arch Linux's dart package.
 
 extra:
   recipe-maintainers:
