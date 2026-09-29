@@ -10,26 +10,43 @@ cat > build/config/gclient_args.gni <<'GNI'
 build_devtools_from_sources = false
 GNI
 
-# Upstream generates this file via a gclient hook before building; the ninja
-# create_sdk target and version stamping read it.
+# gclient normally populates tools/sdks/dart-sdk with a prebuilt SDK that
+# bootstraps kernel compilation (bootstrap_compile_platform); use the official
+# release zip from the recipe instead. The archive's top-level dir may or may
+# not be stripped on extraction, so resolve both layouts.
+if [[ -x "$SRC_DIR/bootstrap/bin/dart" ]]; then
+  BOOTSTRAP_SDK="$SRC_DIR/bootstrap"
+else
+  BOOTSTRAP_SDK="$SRC_DIR/bootstrap/dart-sdk"
+fi
+mkdir -p tools/sdks
+ln -sfn "$BOOTSTRAP_SDK" tools/sdks/dart-sdk
+
+# Upstream gclient hooks: the version file and the package config consumed by
+# the snapshot-compiling create_sdk actions (both run with the bootstrap dart).
 python3 tools/generate_sdk_version_file.py
+python3 tools/generate_package_config.py
 
 # Wire the conda toolchain into the GN build the same way Arch does with sed:
 # upstream hardcodes depot_tools/CIPD toolchain paths that we don't fetch.
 GN_ARGS="is_debug = false is_release = true verify_sdk_hash = false"
 if [[ "$(uname)" == "Darwin" ]]; then
+  host_cpu_dir="mac-x64"
+  if [[ "$(uname -m)" == "arm64" ]]; then
+    host_cpu_dir="mac-arm64"
+  fi
   # The mac toolchain file hardcodes //buildtools/mac-*/clang/bin (CIPD clang);
   # point it at the conda toolchain instead.
-  if [[ "$(uname -m)" == "arm64" ]]; then
-    TC_FILE="build/toolchain/mac/mac_toolchain.gni"
-    SED_EXPR='s|rebase_path("//buildtools/mac-arm64/clang/bin", root_build_dir)|rebase_path("'"$BUILD_PREFIX"'/bin", root_build_dir)|'
-  else
-    TC_FILE="build/toolchain/mac/mac_toolchain.gni"
-    SED_EXPR='s|rebase_path("//buildtools/mac-x64/clang/bin", root_build_dir)|rebase_path("'"$BUILD_PREFIX"'/bin", root_build_dir)|'
-  fi
-  sed -i.bak "$SED_EXPR" "$TC_FILE" && rm -f "$TC_FILE.bak"
-  # mac_sdk.gni runs find_sdk.py unconditionally (rejects conda workers with
-  # no Xcode); guard it so an explicit mac_sdk_path short-circuits discovery.
+  sed -i.bak \
+    "s|rebase_path(\"//buildtools/${host_cpu_dir}/clang/bin\", root_build_dir)|rebase_path(\"$BUILD_PREFIX/bin\", root_build_dir)|" \
+    build/toolchain/mac/mac_toolchain.gni
+  rm -f build/toolchain/mac/mac_toolchain.gni.bak
+  # compiler/BUILD.gn reads a CIPD toolchain version stamp for is_clang builds
+  # (to force relinks when the toolchain changes); synthesize it for conda clang.
+  mkdir -p "buildtools/${host_cpu_dir}/clang/.versions"
+  printf '{"instance_id": "conda-clang"}\n' > "buildtools/${host_cpu_dir}/clang/.versions/clang.cipd_version"
+  # mac_sdk.gni runs find_sdk.py unconditionally, which rejects conda workers
+  # without Xcode; guard discovery so mac_sdk_path (the conda sysroot) wins.
   python3 - <<'PY'
 p = 'build/config/mac/mac_sdk.gni'
 s = open(p).read()
@@ -76,15 +93,6 @@ else
 fi
 
 gn gen out --args="$GN_ARGS"
-
-# Build the VM first (the dartdev-enabled `dart` binary dispatches to a
-# `dartvm` executable next to it, which create_sdk also ships as bin/dartvm),
-# then use it to generate the package config the snapshot-compiling create_sdk
-# actions consume (upstream uses a checked-in prebuilt dart-sdk for this; we
-# self-bootstrap instead).
-ninja -C out dartvm dart -j "${CPU_COUNT}"
-out/dartvm --packages=tools/empty_package_config.json tools/generate_package_config.dart
-
 ninja -C out create_sdk -j "${CPU_COUNT}"
 
 cp -R out/dart-sdk/bin "$PREFIX"/

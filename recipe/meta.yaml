@@ -32,6 +32,22 @@ source:
     fn: devtools-12d595649f189f1896722623f72599077f476848.zip
     sha256: c3d92850115fdbd1ad9e462bcb2b96a36f3f518c74fdb8086b4d0d4ead8c1caa
     folder: sdk/third_party/devtools
+  # gclient normally fetches a prebuilt Dart SDK into tools/sdks/dart-sdk to
+  # bootstrap kernel compilation (bootstrap_compile_platform); ship the
+  # official release zip instead. macOS 13 workers cannot run a 3.11+ VM
+  # (minos 14.0), so the mac bootstrap is 3.10.x.
+  - url: https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-linux-x64-release.zip  # [linux and x86_64]
+    sha256: 6487a10df5eab890d746d14a55f4c70bec3c1c0633f51804eb504cbc0fc395bb  # [linux and x86_64]
+    folder: bootstrap  # [linux and x86_64]
+  - url: https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-linux-arm64-release.zip  # [linux and aarch64]
+    sha256: 1d545609bdf9da6fb5e68fbd96a599e2836e44ee64379991bd4493ee764d2fdb  # [linux and aarch64]
+    folder: bootstrap  # [linux and aarch64]
+  - url: https://storage.googleapis.com/dart-archive/channels/stable/release/3.10.9/sdk/dartsdk-macos-arm64-release.zip  # [osx and arm64]
+    sha256: f7d80c86f93348999812c1ae0f79013757b797af395f2cba70d2027a00be564e  # [osx and arm64]
+    folder: bootstrap  # [osx and arm64]
+  - url: https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-windows-x64-release.zip  # [win]
+    sha256: c38bcecee16b348694d4acc72b3781e5fa0e8766a4d0d1576182c7204ab3d763  # [win]
+    folder: bootstrap  # [win]
   - url: https://github.com/dart-lang/core/archive/be0b1531c445a185d3e93887b8d0355fc766c314.tar.gz
     sha256: 5c82852382b1b6a16794cb2a4181981c561862ab95541e6e0eefaae4d1a1084d
     folder: sdk/third_party/pkg/core
