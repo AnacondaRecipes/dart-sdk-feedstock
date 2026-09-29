@@ -119,7 +119,7 @@ requirements:
     # (and anaconda-linter 0.1.1 cannot render that jinja).
     - gn
     - ninja
-    - patch
+    - patch  # [unix]
     - git  # [not win]
     - python
     # llvm-ar/llvm-nm/llvm-strip/dsymutil for the GN mac toolchain.

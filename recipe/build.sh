@@ -3,6 +3,13 @@ set -ex
 
 cd "$SRC_DIR/sdk"
 
+# Normally written by gclient sync; without it gn cannot resolve the root
+# BUILD.gn's import. build_devtools_from_sources=false keeps the prebuilt
+# DevTools bundle from third_party/devtools (fetched via CIPD in the recipe).
+cat > build/config/gclient_args.gni <<'GNI'
+build_devtools_from_sources = false
+GNI
+
 # Upstream generates this file via a gclient hook before building; the ninja
 # create_sdk target and version stamping read it.
 python3 tools/generate_sdk_version_file.py
@@ -30,8 +37,12 @@ if [[ "$(uname)" == "Darwin" ]]; then
   fi
 else
   # gcc toolchain suites take a binary-name prefix via gn args; conda's
-  # cross-prefixed gcc/binutils names come straight from $CC.
-  TC_PREFIX="${CC%-gcc}-"
+  # cross-prefixed gcc/binutils names come from CONDA_TOOLCHAIN_HOST (the
+  # compiler binary itself may end in -cc or -gcc, so strip either).
+  TC_PREFIX="${CONDA_TOOLCHAIN_HOST:-$(basename "$CC")}"
+  TC_PREFIX="${TC_PREFIX%-cc}"
+  TC_PREFIX="${TC_PREFIX%-gcc}"
+  TC_PREFIX="${TC_PREFIX}-"
   GN_ARGS="$GN_ARGS is_clang = false"
   if [[ "$(uname -m)" == "aarch64" ]]; then
     GN_ARGS="$GN_ARGS target_cpu = \"arm64\""

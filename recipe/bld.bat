@@ -3,6 +3,10 @@ setlocal enabledelayedexpansion
 
 cd /d "%SRC_DIR%\sdk"
 
+:: Normally written by gclient sync; without it gn cannot resolve the root
+:: BUILD.gn's import. Keeps the prebuilt DevTools bundle from third_party\devtools.
+> build\config\gclient_args.gni echo build_devtools_from_sources = false
+
 :: Upstream generates this file via a gclient hook before building.
 python tools\generate_sdk_version_file.py
 
