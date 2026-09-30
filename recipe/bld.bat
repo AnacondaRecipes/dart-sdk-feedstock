@@ -36,6 +36,13 @@ set "WINDOWSSDKDIR=%VSINSTALLDIR%Windows Kits\10\"
 :: gn on Windows invokes python3, which conda does not ship
 if not exist "%BUILD_PREFIX%\python3.exe" copy /Y "%BUILD_PREFIX%\python.exe" "%BUILD_PREFIX%\python3.exe" >nul
 
+:: The win toolchain rules re-exec ninja from //buildtools/ninja/ninja
+:: (build/toolchain/win/msvc_toolchain.gni); upstream's hooks populate it, so
+:: copy the conda ninja there.
+if not exist "buildtools\ninja" mkdir "buildtools\ninja"
+for /f "delims=" %%i in ('where ninja') do set "NINJA_EXE=%%i"
+copy /Y "!NINJA_EXE!" "buildtools\ninja\ninja.exe" >nul
+
 gn gen out --args="target_cpu = \"x64\" is_debug = false is_release = true verify_sdk_hash = false"
 if %ERRORLEVEL% NEQ 0 exit /b 1
 
