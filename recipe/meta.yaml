@@ -24,6 +24,7 @@ source:
     patches:
       - patches/0001-ignore-warnings-in-binaryen.patch  # [not win]
       - patches/0002-link-libstdc-static-on-linux.patch  # [linux]
+      - patches/0003-win-dbghelp-optional.patch  # [win]
   # Prebuilt DevTools app shipped at bin/resources/devtools. Upstream fetches
   # it as a CIPD package (build_devtools_from_sources is false upstream);
   # building it from source would need the Flutter toolchain. The explicit fn

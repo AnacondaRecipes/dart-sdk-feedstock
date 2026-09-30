@@ -1,0 +1,34 @@
+From f9812d0228444b80c673ef83561cc793c6b8912a Mon Sep 17 00:00:00 2001
+From: Steven <scrass@anaconda.com>
+Date: Wed, 30 Sep 2026 08:32:02 -0600
+Subject: [PATCH] Make dbghelp.dll optional in vs_toolchain CopyDlls
+
+The conda-provided Visual Studio Build Tools do not include the
+"Debugging Tools for Windows" feature, so the SDK Debuggers directory
+has no dbghelp.dll and gn gen fails. The DLL is only copied into the
+build tree for symbolizing test stacks; the shipped binaries resolve
+dbghelp from the system directory at runtime.
+---
+ build/vs_toolchain.py | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/build/vs_toolchain.py b/build/vs_toolchain.py
+index ee033b3..54a5822 100644
+--- a/build/vs_toolchain.py
++++ b/build/vs_toolchain.py
+@@ -454,7 +454,11 @@ def _CopyDebugger(target_dir, target_cpu):
+ 
+   # List of debug files that should be copied, the first element of the tuple is
+   # the name of the file and the second indicates if it's optional.
+-  debug_files = [('dbghelp.dll', False), ('dbgcore.dll', True)]
++  # Conda: the Visual Studio Build Tools do not include the "Debugging Tools
++  # for Windows" feature. dbghelp.dll is only copied into the build tree for
++  # symbolizing test stacks; shipped binaries resolve it from the system
++  # directory at runtime, so treat it as optional.
++  debug_files = [('dbghelp.dll', True), ('dbgcore.dll', True)]
+   for debug_file, is_optional in debug_files:
+     full_path = os.path.join(win_sdk_dir, 'Debuggers', target_cpu, debug_file)
+     if not os.path.exists(full_path):
+-- 
+2.50.1 (Apple Git-155)
+
