@@ -28,7 +28,7 @@ source:
   # it as a CIPD package (build_devtools_from_sources is false upstream);
   # building it from source would need the Flutter toolchain. The explicit fn
   # avoids the "git_revision:" cache filename, which is illegal on Windows.
-  - url: https://chrome-infra-packages.appspot.com/dl/dart/third_party/flutter/devtools/+/git_revision:12d595649f189f1896722623f72599077f476848  # analint: invalid_url  # CIPD endpoint answers HEAD with 405; GET works (hash verified)
+  - url: https://chrome-infra-packages.appspot.com/dl/dart/third_party/flutter/devtools/+/git_revision:12d595649f189f1896722623f72599077f476848  # analint: reachable_url  # CIPD endpoint answers HEAD with 405; GET works (hash verified)
     fn: devtools-12d595649f189f1896722623f72599077f476848.zip
     sha256: c3d92850115fdbd1ad9e462bcb2b96a36f3f518c74fdb8086b4d0d4ead8c1caa
     folder: sdk/third_party/devtools
@@ -159,12 +159,10 @@ requirements:
   build:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
-    # No {{ stdlib('c') }}: the compiler packages pull the matching sysroot
-    # (and anaconda-linter 0.1.1 cannot render that jinja).
+    - {{ stdlib('c') }}
     - gn
     - ninja
-    - patch  # [not win]
-    - git  # analint: no_git_on_windows  # conda-build needs git to fetch the git_url sources (mini_chromium has no tarball mirror)
+    - git
     - python
     # llvm-ar/llvm-nm/llvm-strip/dsymutil for the GN mac toolchain.
     - llvm-tools  # [osx]
@@ -186,7 +184,7 @@ about:
   dev_url: https://github.com/dart-lang/sdk
   license: BSD-3-Clause
   license_family: BSD
-  license_file: LICENSE
+  license_file: sdk/LICENSE
   summary: a client-optimized language for developing fast apps on any platform
   description: |
     Dart is a client-optimized language for developing fast apps on any platform.

@@ -33,6 +33,9 @@ set "DEPOT_TOOLS_WIN_TOOLCHAIN=0"
 set "GYP_MSVS_OVERRIDE_PATH=%VSINSTALLDIR%"
 set "WINDOWSSDKDIR=%VSINSTALLDIR%Windows Kits\10\"
 
+:: gn on Windows invokes python3, which conda does not ship
+if not exist "%BUILD_PREFIX%\python3.exe" copy /Y "%BUILD_PREFIX%\python.exe" "%BUILD_PREFIX%\python3.exe" >nul
+
 gn gen out --args="target_cpu = \"x64\" is_debug = false is_release = true verify_sdk_hash = false"
 if %ERRORLEVEL% NEQ 0 exit /b 1
 
